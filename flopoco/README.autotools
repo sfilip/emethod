@@ -1,0 +1,12 @@
+This is a (mostly unsupported) README for compiling FloPoCo with the autotools.
+
+We assume you know the autotools.
+Assuming you have automake and libtool correctly installed, compilation should be lauched by
+make -f Makefile.autotools  && ./configure && make
+
+If it doesn't, it is because the file lists in the two Makefile.am is
+out of sync with the release you are trying to compile or the svn. You
+probably have to edit the two Makefile.am to correct the errors.
+
+This setup was provided, then maintained by Daniele Mastrandrea and by Fabrizio Ferrandi. Thanks to them.
+

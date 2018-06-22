@@ -1,0 +1,182 @@
+TODO file for FloPoCo
+
+* Release-critical (current regressions):
+** FPPipeline
+** lut_rng
+* Cleaning up
+** get rid of use() in Operator
+** Clean up DualTable
+** Get rid of the useBitHeap arg in KCMs
+** bug  ./flopoco FixSinCos -16 TestBenchFile 1000
+  (close corresponding bug when fixed)
+** change interface to FixSinCos and CordicSinCos to use lsb and not w
+** IntConstMult: signed or unsigned int? (fix main.cpp)
+** rounding bug:  ./flopoco FixRealKCM 1 3 -10 -10 "Pi" 1 TestBenchFile 1000
+	(close corresponding bug when fixed)
+** Check IntDualSub situation
+** resurrect Guillaume's work (IntPower etc)
+** Fuse CordicAtan2 and FixAtan2
+** compression bug: ./flopoco IntMultiplier 2 16 16 1 0 0 does not produce a simple adder
+** interface: simple and expert versions of IntMultiplier
+** Here and there, fix VHDL style issues needed for whimsical simulators or synthesizers. See doc/VHDLStyle.txt
+** For Kentaro: avoid generating multiple times the same operators. 
+** Doxygenize while it's not too late
+
+** clean up Target
+
+* Janitoring
+*** uniformize name construction 
+using setNameWithFreqAndUID()  Model: src/FPAddSub/FPAdderSinglePath.cpp 
+
+*** TargetFactory
+*** pair=value parsing in UserInterface
+*** add more  newComponentAndInstance() on the model of FixMultAdd
+*** rename pow2, intpow2 etc as exp2
+*** doxygen: exclude unplugged operators
+* Bit heap and multipliers
+** rewrite BitHeap with fixed-point support and better compression (see Kumm papers and uni_kassel branch)
+** pipeline virtual IntMult
+** See UGLYHACK in IntMultiplier
+** IntSquarer should be made non-xilinx-specific, and bitheapized
+** Same for IntKaratsuba and FPKaratsuba, which have been disabled completely
+** Get rid of SignedIO in BitHeap: this is a multiplier concern, not a bit heap concern
+** get rid of Operator::useNumericStd_Signed etc
+** get rid of bitHeap::setSignedIO(signedIO);
+** Check all these registered etc nonsense in Signal. Is it really used?
+** Bug (ds FixRealKCM?) ./flopoco -verbose=3 FPExp 7 12 
+** With Matei: see the nextCycles in FPExp and see if we can push them in IntMultiplier somehow
+
+
+* BitHeapization 
+(and provide a bitheap-only constructor for all the following):
+** systematic constructor interface with Signal variable
+** HOTBM
+** IntAddition/*
+** Rework Guillaume Sergent's operators around the bit heap
+** define a policy for enableSuperTile: default to false or true?
+** Push this option to FPMult and other users of IntMult.
+** Replace tiling exploration with cached/classical tilings
+** More debogdanization: Get rid of
+    IntAddition/IntCompressorTree
+    IntAddition/NewIntCompressorTree
+    IntAddition/PopCount
+    after checking the new bit heap compression is at least as good...
+** Check all the tests for "Virtex4"  src/IntAddSubCmp and replace them with tests for the corresponding features
+
+
+Testbench
+
+
+* Framework
+** define a Timing as a (Cycle, CriticalPath), and associate that cleanly to Signals with getTiming methods that set both cycle and critical path.
+** Bug on outputs that are bits with isBus false and  multiple-valued  
+	(see the P output of Collision in release 2.1.0)
+** Multiple valued outputs should always be intervals, shouldn't they?
+** global switch to ieee standard signed and unsigned libraries
+** fix the default getCycleFromSignal . 
+
+
+* Wanted operators
+** Multipartite (with HOTBM)
+** Sum of n squares
+** LUT-based integer comparators
+** BoxMuller
+
+
+* Improvements to do, operator by operator
+** Collision
+*** manage infinities etc
+*** decompose into FPSumOf3Squares and Collision
+
+** HOTBM
+*** true FloPoCoization, pipeline
+*** better (DSP-aware) architectural exploration
+
+ConstMult:
+
+** ConstMult
+*** group KCM and shift-and-add in a single OO hierearchy (selecting the one with less hardware)
+*** For FPConstMult, don't output the LSBs of the IntConstMult 
+   but only their sticky
+*** more clever, Lefevre-inspired algorithm
+*** Use DSP: find the most interesting constant fitting on 18 bits
+*** compare with Spiral.net and Gustafsson papers
+*** Implement the continued fraction stuff for FPCRConstMult
+
+** Shifters
+*** provide finer spec, see the TODOs inside Shifter.cpp
+
+General
+
+
+* Discussions
+** the NewPipelineFramework branch: redoing pipeline from scratch
+If we were to redo the pipeline framework from scratch, here is the proper way to do it.
+
+The current situation has a history: we first added cycle management, then, as a refinement, critical-path based subcycle timing.
+So we have to manage explicitely the two components of a lexicographic time (cycle and delay within a cycle)
+But there is only one wallclock time, and the decomposition of this wallclock time into cycles and sub-cycles could be automatic. And should.
+ 
+The following version of declare() could remove the need for manageCriticalPath as well as all the explicit synchronization methods.
+declare(name, size, delay)
+declares a signal, and associates its computation delay to it.  This delay is what we currently pass to manageCriticalPath. Each signal now will have a delay associated to it (with a default of 0 for signals that do not add to the critical path).
+The semantics is: this signal will not be assigned its value before the instant delta + max(instants of the RHS signals) 
+This is all what the first pass, the one that populates the vhdl stream, needs to do. No explicit synchronization management needed. No need to setCycle to "come back in time", etc.
+
+Then we have a retiming procedure that must associate a cycle to each signal. 
+It will do both synchronization and cycle computation. According to Alain Darte there is an old retiming paper that shows that the retiming problem can be solved optimally in linear time for DAGs, which is not surprising.
+Example of simple procedure: 
+first build the DAG of signals (all it takes is the same RHS parsing, looking for signal names, as we do)
+Then sit on the existing scheduling literature...
+For instance  
+1/ build the operator's critical path
+2/ build the ASAP and ALAP instants for each signal
+3/ progress from output to input, allocating a cycle to each signal, with ALAP scheduling (should minimize register count for compressing operators)
+4/ possibly do a bit of Leiserson and Saxe retiming 
+
+We keep all the current advantages: 
+- still VHDL printing based
+- When developing an operator, we initially leave all the deltas to zero to debug the combinatorial version. Then we incrementally add deltas, just like we currently  add manageCriticalPath(). 
+- etc
+
+The difference is that the semantic is now much clearer. No more notion of a block following a manageCriticalPath(), etc
+
+The question is: don't we loose some control on the circuit with this approach, compared to what we currently do?
+
+Note that all this is so much closer to textbook literature, with simple DAGs labelled by delay...
+
+** Options for signed/unsigned VHDL
+Option 0: Do nothing radical. It seems when the options
+ --ieee=standard --ieee=synopsys
+are passed to ghdl in this order, we may mix standard and synopsys entities
+See directory TestsSigned  
+Incrementally move towards option 1 (for new operators, and when needed on legacy ones)
+
+Option 1: 
+ * Keep only std_logic_vector as IO,
+ * Add an option to declare() for signed / unsigned / std_logic_vector DONE
+    The default should still be std_logic_vector because we don't want to edit all the existing operators
+ * add conversions to the VHDL.
+ * No need to edit the TestBench architecture
+
+Option 2 (out: see discussion below)
+ Same as Option 1, but allow signed/unsigned IOs
+ * Need to edit the TestBench architecture
+ * Cleaner but adds more coding. For instance, in Table, need to manage the types of IOs.
+ - Too many operators have sign-agnostic information
+
+---------------------------------------------------
+Should we allow signed/unsigned IO?
+- Good reason for yes: it seems to be better (cleaner etc)
+- Good reason for no: many operators don't care (IntAdder, all the Tables) 
+	and we don't want to add noise to their interface if it brings no new functionality.
+- Bad reason for no: it is several man-days of redesign of the framework, especially TestBench
+	Plus several man-weeks to manually upgrade all the existing operators
+Winner: NO, we keep IOs as std_logic_vector.
+
+Should the default lib be standard (currently synopsys)?
+Good reason for yes: it is the way forward
+Bad reasons for no:  it requires minor editing of all existing operators 
+Winner: YES, but after the transition to sollya4 is complete and we have a satisfiying regression test framework.
+
+

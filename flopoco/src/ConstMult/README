@@ -1,0 +1,14 @@
+This directory contains classes used for the implementation of multipliers by constants. Several variations are available, each was motivated by a given context. We probably do not cover all the possible needs, but you will find here a good base for further developments.
+
+
+There are two main algorithms. 
+
+The KCM algorithm (I am unable to explain what the K stands for) uses LUTs to store sub-products.  The *KCM* classes implement the table-based KCM method.
+
+Shift-and-add multipliers express an integer multiplier as a sequence of shift-and-add operations. 
+
+The class ShiftAddOp defines such an operation.
+The class ShiftAddDag defines a directed acyclic graph (DAG) of such operations.
+The class IntConstMult builds such a DAG for integer multiplication. It inherits Operator.
+The class FPConstMult builds an FP constant multiplier using an IntConstMult for the mantissas.
+

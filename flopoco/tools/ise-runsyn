@@ -1,0 +1,613 @@
+##
+################################################################################
+##                    Compilation and Result Generation script
+## This tool is part of  FloPoCo
+## Author:  Bogdan Pasca (2008)
+## All rights reserved
+################################################################################
+
+
+
+# PARAMETERS MANUALLY SET BY USER
+########################################################
+
+virtex4="xc4vfx100-12-ff1152"
+virtex5="xc5vfx100T-3-ff1738"
+virtex6="xc6vhx380T-3-ff1923"
+
+spartan3="xc3s200-5-pq208"
+spartan3e="xc3s100e-5-tq144"
+
+
+if [ -z "$target" ]; then
+	selected_target=$virtex6
+	target="virtex6"
+elif [ $target == "virtex4" ]; then
+	selected_target=$virtex4
+elif [ $target == "virtex5" ]; then
+	selected_target=$virtex5
+elif [ $target == "virtex6" ]; then
+	selected_target=$virtex6	
+elif [ $target == "spartan3" ]; then
+	selected_target=$spartan3
+elif [ $target == "spartan3e" ]; then
+	selected_target=$spartan3e
+else
+	selected_target=$virtex6
+	target="virtex6"
+fi 
+
+
+resultsPath=$HOME/Results
+settingsFilename=settings64.sh 
+pf=$XILINX/../$settingsFilename
+
+#if results are to be outputed to a file or not
+out2file=1
+#if verbose option is active or not
+verbose=0
+#if showing warnings is active or not
+warnings=0
+#targets
+
+
+
+
+
+########################################################
+########################################################
+
+
+function buildXST {
+
+#check if correct number of inputs are provided
+if [ $# -ne 2 ]; then
+	echo "> ERROR: The number of parameters passed to buildXST is NOT equal to 2"
+	echo "  Exiting ..."
+	exit
+fi
+
+#set function variables
+opName=$1
+DSP=$2
+DSP=`echo "$DSP" | tr '[A-Z]' '[a-z]'`
+
+#convert DSP variable content to uppercase 
+#DSP=${DSP|^^}
+
+#check the DSP variable
+if [ "$DSP" == "auto" -o "$DSP" == "yes" -o "$DSP" == "no" ]; then
+	echo "> INFO: Xilinx XST -Use DSP48 option set to: $DSP"
+else
+	echo "> ERROR: Xilinx XST -Use DSP48 must be one of {auto, yes, no}. Requested option was: $DSP"
+	echo "  Exiting ..."
+	exit
+fi
+
+#check if the .xst file exists for the current operator
+if [ -a $opName.xst ]; then
+	echo "> INFO: .xst file does exists for the requested operator"
+	if [ -w $opName.xst ]; then	
+		echo "> INFO: Removing the current .xst file"
+	else
+		echo "> ERROR: do not have WRITE permissions on $opName.xst"
+		echo "  Exiting ..."
+		exit
+	fi
+else
+	echo "> INFO: .xst file does not exist for the requested operator"
+fi
+
+#remove the current .xst file for the operator
+rm -f $opName.xst
+if [ -a $opName.xst ]; then
+	echo "> ERROR: Some sort of error encountered while removing $opName.xst"
+	echo "  Exiting ..."
+	exit
+fi 
+
+echo "> INFO: Creating $opName.xst"
+#create a new empty .xst file for the operator
+touch $opName.xst
+if [ ! -w $opName.xst ]; then
+	echo "> ERROR: could not create empty file $opName.xst with writing permissions"
+	echo "  Exiting ..."
+	exit
+fi
+
+
+if [ $target == "virtex6" ]; then 
+
+	#send write the .xst file with the correct information
+	echo "set -tmpdir \"./xst/projnav.tmp\"
+set -xsthdpdir \"./xst\"
+run
+-ifn $opName.prj
+-ifmt mixed
+-ofn $opName
+-ofmt NGC
+-p $virtex6
+-top  $opName
+-opt_mode Speed
+-opt_level 2
+-power NO
+-iuc NO
+-lso $opName.lso
+-keep_hierarchy NO
+-netlist_hierarchy as_optimized
+-rtlview Yes
+-glob_opt AllClockNets
+-read_cores YES
+-write_timing_constraints NO
+-cross_clock_analysis NO
+-hierarchy_separator /
+-bus_delimiter <>
+-case maintain
+-slice_utilization_ratio 100
+-bram_utilization_ratio 100
+-dsp_utilization_ratio 100
+-lc auto
+-reduce_control_sets auto
+-fsm_extract YES -fsm_encoding Auto
+-safe_implementation No
+-fsm_style LUT
+-ram_extract Yes
+-ram_style Auto
+-rom_extract Yes
+-shreg_extract YES
+-rom_style Auto
+-auto_bram_packing YES
+-resource_sharing YES
+-async_to_sync NO
+-shreg_min_size 2
+-use_dsp48 $DSP
+-iobuf YES
+-max_fanout 100000
+-bufg 32
+-register_duplication YES
+-register_balancing NO
+-move_first_stage NO
+-move_last_stage NO
+-optimize_primitives YES
+-use_clock_enable Auto
+-use_sync_set Auto
+-use_sync_reset Auto
+-iob auto
+-equivalent_register_removal YES
+-slice_utilization_ratio_maxmargin 5" >> $opName.xst;
+
+else
+
+	#send write the .xst file with the correct information
+	echo "set -tmpdir \"./xst/projnav.tmp\"
+set -xsthdpdir \"./xst\"
+run
+-ifn $opName.prj
+-ifmt mixed
+-ofn $opName
+-ofmt NGC
+-p $selected_target
+-top $opName
+-opt_mode Speed
+-opt_level 1
+-keep_hierarchy NO
+-rtlview Yes
+-glob_opt AllClockNets
+-read_cores YES
+-write_timing_constraints NO
+-cross_clock_analysis NO
+-hierarchy_separator /
+-bus_delimiter <> 	-case maintain
+-slice_utilization_ratio 100
+-bram_utilization_ratio 100
+-verilog2001 YES
+-fsm_extract YES -fsm_encoding Auto
+-safe_implementation No
+-fsm_style lut
+-ram_extract Yes
+-ram_style Auto
+-rom_extract Yes
+-mux_style Auto
+-decoder_extract YES
+-priority_extract YES
+-shreg_extract YES	
+-shift_extract YES
+-xor_collapse YES
+-rom_style Auto
+-auto_bram_packing YES
+-mux_extract YES
+-resource_sharing YES
+-async_to_sync NO
+-iobuf NO
+-max_fanout 500
+-bufg 32
+-register_duplication YES
+-register_balancing YES
+-slice_packing YES
+-optimize_primitives YES
+-use_clock_enable Auto
+-use_sync_set Auto
+-use_sync_reset Auto
+-iob auto
+-equivalent_register_removal YES
+-slice_utilization_ratio_maxmargin 5" >> $opName.xst
+
+	if [ $target == "virtex4" ]; then
+		echo "-bufr 16" >> $opName.xst
+	fi
+
+	if [ $target == "virtex4" -o $target == "virtex5" -o $target == "virtex6" ]; then
+		echo "
+		-iuc NO
+		-power NO
+		-dsp_utilization_ratio 100
+		-use_dsp48 $DSP
+		-lso $opName.lso" >> $opName.xst
+
+	fi
+
+
+fi
+
+
+#check if size of $opName.xst is greater than 0
+if [ -s $opName.xst ]; then
+	echo "> INFO: Creation of $opName.xst was successful"
+else
+	echo "> ERROR: Some error occured while writing the contents of $opName.xst to disk"
+	echo "  Exiting ..."
+	exit
+fi
+}
+
+################################################################################
+################################################################################
+################################################################################
+################################################################################
+################################################################################
+################################################################################
+################################################################################
+################################################################################
+################################################################################
+################################################################################
+################################################################################
+################################################################################
+
+# Here is the actual place where the script starts
+#clear
+
+if [ $# -gt 2 ]; then 
+	echo "=================== runsyn HELP ======================================="
+	echo "Input shoud be of form: OPERATOR [Optional]"
+	echo "	>OPERATOR: the name of the top module "
+	echo " Hidden: (set internally)"
+	echo "	>OUT2FILE: {0|1} - outputs the synthesis results to the file in "
+	echo "             $HOME/Results/ProjectName/OperatorValues (set on 1)" 
+	echo "	>VERBOSE : {0|1} - the verbose option (set on 0)"
+	echo "	>WARNINGS: {0|1} - if the bash warnings are or not displayed (set on 0)"
+	echo "Optional: "
+	echo "	>filenameTAG: is a tuple of op1_op2_op3 where:"
+	echo "                > op1={seq|cmb} ->eye candy for filename to distinguish"
+	echo "                  fast if operator is sequential or combinatorial"
+	echo "                > op2=frequency in MHz ofthe operator to be synthetized" 
+	echo "                > op3={yes|no|auto} the synthetis option for use DSP48"
+	echo "======================================================================="
+	echo "Example: "
+	echo "runsyn FPLargeAcc_8_23_15_M30_20 seq_400_auto"
+	echo "Exiting ..."
+	exit
+fi
+
+#===============================================================================
+topModule=$1
+echo "> INFO: Top Module name is: |$topModule| "
+#check if $topModule exists
+searchPattern="entity $topModule is"
+grepResult=`grep "$searchPattern" flopoco.vhdl`
+#grepResult2=`grep "$searchPattern" $projectPath/flopoco.vhdl`
+if [ "$grepResult" == "" ]; then 
+	if [ "$grepResult2" == "" ]; then 
+		echo "> ERROR: requested top module: $topModule is not found in flopoco.vhdl"
+		echo "> Grep result: |$grepResult|"
+		echo "  Exting ..."
+		exit
+	fi
+fi
+
+#===============================================================================
+if [ $# -eq 1 ]; then
+	echo "> WARNING: optional parameters NOT present"
+else
+	if [ $# -eq 2 ]; then
+		echo "> INFO: optional parameters present"
+	else
+		echo "> ERROR: the total number of parameters exceeded"
+		echo "  Exiting ..."
+		exit 
+	fi
+fi
+
+#===============================================================================
+if [ $out2file -eq 1 -o $out2file -eq 0 ]; then
+	if [ $out2file -eq 1 ]; then
+		echo "> INFO: The synthetis results WILL BE outputed to disk"
+	else
+		echo "> INFO: The synthetis results WILL NOT BE outputed to disk"
+	fi
+else
+	echo "> ERROR: The OUT2FILE argument should be one of {1|0}"
+	echo "  Exiting ..."
+	exit
+fi
+#===============================================================================
+if [ $verbose -eq 1 -o $verbose -eq 0 ]; then
+	if [ $verbose -eq 1 ]; then
+		echo "> INFO: verbose option IS active"
+	else
+		echo "> INFO: verbose option IS NOT active"
+	fi
+else
+	echo "> ERROR: The verbose argument should be one of {1|0}"
+	echo "  Exiting ..."
+	exit
+fi
+#===============================================================================
+if [ $warnings -eq 1 -o $warnings -eq 0 ]; then
+	if [ $warnings -eq 1 ]; then
+		echo "> INFO: warning option IS active"
+	else
+		echo "> INFO: warning option IS NOT active"
+	fi
+else
+	echo "> ERROR: The warning argument should be one of {1|0}"
+	echo "  Exiting ..."
+	exit
+fi
+#===============================================================================
+filenameTAG=$2
+################################################################################
+################################################################################
+
+#set the startPath to the current path
+startPath=$PWD
+
+#check if the file flopoco.vhdl exists
+if [ ! -f "flopoco.vhdl" ]; then
+	echo "> ERROR: the file flopoco.vhdl does not exist"
+	echo "  Exiting ..."
+	exit
+fi 
+
+#===============================================================================
+#THE XILINX PATH IS SET MANUALLY
+#execute commands from filename in the current shell
+if [ -a $pf ]; then
+	sh $pf
+else
+	echo "> ERROR: Xilinx Path NOT set correctly. Modify path at the top of this file"	
+	echo "  Exiting ..."
+	exit	
+fi
+#===============================================================================
+
+#remove all project locks
+rm -R -f *.lock 
+
+# Set up the DSP block parameter
+if [ $# -eq 6 ]; then
+	DSP_B=${filenameTAG##*_}
+else
+	echo "> WARNING: No value was specified for use DSP48 blocks."
+	echo "  Setting parameter to: auto"
+	DSP_B="auto"
+fi
+
+#call the function to actually create the .xst file
+buildXST $topModule $DSP_B 
+if [ -a $topModule.prj ]; then
+	#rm -f $topModule.prj
+	echo "> WARNING: Old $topModule.prj file exists. Using Existing one"
+else
+	#creating the file	
+	touch $topModule.prj
+	#writing to file
+	if [ -w $topModule.prj ]; then
+		echo "vhdl work \"flopoco.vhdl\"" >> $topModule.prj
+	else
+		echo "> ERROR: Not able to write to file $topModule.prj "
+		echo "  Exiting ..."
+		exit
+	fi
+fi
+
+if [ -a $topModule.lso ]; then
+	#rm -f $x.lso
+	echo "> WARNING: Old $topModule.lso file exists. Using Existing one"
+else
+	touch $topModule.lso
+	#writing to file
+	if [ -w $topModule.lso ]; then
+		echo work >> $x.lso
+	else
+		echo "> ERROR: Not able to write to file $topModule.lso "
+		echo "  Exiting ..."
+		exit
+	fi
+fi
+#===============================================================================
+
+#XSTProjFName=`ls -t *.xst|head -1` 										#get the latest xst
+#SYRProjFName=`ls -t *.syr|head -1` 										#get the latest syr
+#rm -f XSTProjFName
+
+if [ -a "xst" ]; then
+	echo "> INFO: xst folder already exists. NOT creating new one"
+else
+	mkdir -p "xst"
+	if [ -a "xst" ]; then
+		echo "> INFO: the xst folder was created succesfully"
+	else
+		echo "> ERROR: Not able to create folder xst "
+		echo "  Exiting ..."
+		exit
+	fi
+fi	
+
+cd xst
+
+if [ -a "projnav.tmp" ]; then
+	echo "> INFO: projnav.tmp folder already exists. NOT creating new one"
+else
+	mkdir -p "projnav.tmp"
+	if [ -a "projnav.tmp" ]; then
+		echo "> INFO: the projnav.tmp folder was created succesfully"
+	else
+		echo "> ERROR: Not able to create folder projnav.tmp "
+		echo "  Exiting ..."
+		exit
+	fi
+fi	
+cd ..	
+	
+xst  -ifn $topModule.xst -ofn $topModule.syr | tee console.out
+
+#echo -en "\033[0;33;40m"
+#grep 'WARNING' console.out
+##echo -e "\033[0m"
+#echo -en "\033[0;31;40m"
+#grep 'ERROR' console.out
+#echo -e "\033[0m"
+
+
+#if not requested -> the results are not outputed to a file
+#=============================================================
+#=============================================================
+if [ $out2file -eq 0 ]; then
+	if [ $verbose -eq 1 ]; then
+		echo "> INFO: No outputs to file were generated"
+	fi
+	exit
+else
+	echo "> INFO: Generating file output"
+fi
+
+
+#IF OUT2FILE is active
+
+#========================================================
+freq=`grep 'Maximum' $topModule.syr | grep 'MHz'`
+freq=${freq##*:}
+freq=${freq%)*}
+if [ $verbose -eq 1 ]; then
+	echo "< OUTPUT: $freq"
+fi
+
+#=======================================================
+deviceUtilizationSummary=`grep 'Device utilization summary:' $topModule.syr`
+selectedDevice=`grep ' Selected Device :' $topModule.syr`
+numberOfSlices=`grep ' Number of Slices:' $topModule.syr`
+numberOfSliceFlipFlops=`grep ' Number of Slice Flip Flops:' $topModule.syr`
+numberOf4InputLUTs=`grep ' Number of 4 input LUTs' $topModule.syr`
+numberOfDSPs=`grep ' Number of DSP48s' $topModule.syr`
+
+
+if [ $warnings -eq 1 ]; then
+	parents=""
+else
+	parents="-p"
+fi
+
+operator=${topModule%%_*}
+opProp=${topModule#*_}
+
+mkdir $parents $resultsPath
+mkdir $parents $resultsPath/$operator/
+mkdir $parents $resultsPath/$operator/$opProp
+
+if [ -a $resultsPath/$operator/$opProp ]; then
+	echo "> INFO: Directory structure was succesfully created"
+else
+	echo "> ERROR: Not able to create result folder hierarchy"
+	echo "  Exiting ..."
+	exit
+fi
+projectPath=$PWD
+cd $resultsPath/$operator/$opProp
+#copy the result summary
+rm -f $opProp\_$filenameTAG.syr
+cp $projectPath/$topModule.syr $resultsPath/$operator/$opProp/$opProp\_$filenameTAG.syr
+
+rm -f $opProp\_$filenameTAG.res
+touch $opProp\_$filenameTAG.res
+if [ -w $opProp\_$filenameTAG.res ]; then
+	echo Maximum Frequency\:$freq  >> $resultsPath/$operator/$opProp/$opProp\_$filenameTAG.res
+	echo -e $deviceUtilizationSummary "\n" $selectedDevice "\n" $numberOfSlices "\n" $numberOfSliceFlipFlops "\n" $numberOf4InputLUTs >> $HOME/Results/$operator/$opProp/$opProp\_$filenameTAG.res
+else
+	echo "> ERROR: Unable to create .res file and write results to it"
+	echo "  Exiting ..."
+	exit
+fi
+
+s=""
+function zeroGenerator {
+n=$1
+s=""
+for i in `seq 1 $n`
+do
+s=$s" "
+done
+}
+
+t="frequency=$freq"
+st=$((72-${#t}))
+
+echo "> INFO: Synthesis result written to: "$resultsPath/$operator/$opProp/
+echo "================================================================================"
+echo "*                      SYNTHETHIS RESULTS                                      *"
+zeroGenerator $st
+spaces=$s
+echo "*     frequency=$freq $spaces*"
+echo "*                                                                              *"
+
+t="$numberOfSlices"
+st=$((73-${#t}))
+zeroGenerator $st
+spaces=$s
+#echo "*    $numberOfSlices $spaces*"
+#t="$numberOfSliceFlipFlops"
+#st=$((73-${#t}))
+#zeroGenerator $st
+#spaces=$s
+#echo "*    $numberOfSliceFlipFlops $spaces*"
+#t="$numberOf4InputLUTs"
+#st=$((73-${#t}))
+#zeroGenerator $st
+#spaces=$s
+#echo "*    $numberOf4InputLUTs $spaces*"
+#t="$numberOfDSPs"
+#st=$((73-${#t}))
+#zeroGenerator $st
+#spaces=$s
+#echo "*    $numberOfDSPs $spaces*"
+#echo "================================================================================"
+
+lines=20
+
+if [ $selected_target == "virtex4" ]; then
+	lines=20
+elif [ $selected_target == "virtex5" ]; then
+	lines=27
+elif [ $selected_target == "virtex6" ]; then
+	lines=30
+elif [ $selected_target == "spartan3" ]; then
+	lines=20
+elif [ $selected_target == "spartan3e" ]; then
+	lines=20
+else
+	lines=30
+fi 
+
+cd $startPath
+grep -A $lines 'Device utilization summary:' $topModule.syr
+
+

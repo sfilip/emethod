@@ -1,0 +1,12 @@
+################################################################################
+##                    Compilation and Result Generation script
+## This tool is part of the Infinite Virtual Library FloPoCoLib
+## and is distributed under the terms of the GNU Lesser General Public Licence.
+## Author:  Bogdan Pasca (2008)
+################################################################################
+
+bash runsyn /home/bogdan/ISE/Shifter $1 1 1 0 seq_400_auto
+topmodule=$1
+operator=${topmodule%%_*}
+opProp=${topmodule#*_}
+gedit /home/bogdan/Results/$operator/$opProp/$opProp\_seq\_400\_auto.res

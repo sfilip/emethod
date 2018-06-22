@@ -1,0 +1,149 @@
+##
+################################################################################
+##             Compilation and Result Generation script for Quartus
+## This tool is part of  FloPoCo
+## Author:  Florent de Dinechin, 2016
+## All rights reserved
+################################################################################
+import os
+import sys
+import re
+import string
+import argparse
+
+def report(text):
+    print "quartus_runsyn: " + text
+
+def get_compile_info(filename):
+    vhdl=open(filename).read()
+
+    # last entity
+    endss = [match.end() for match in re.finditer("entity", vhdl)] # list of endpoints of match of "entity"
+    last_entity_name_start = endss[-2] +1 # skip the space
+    i = last_entity_name_start
+    while(vhdl[i]!=" "):
+        i=i+1
+    last_entity_name_end = i
+    entityname=vhdl[last_entity_name_start:last_entity_name_end]
+
+    # target 
+    endss = [match.end() for match in re.finditer("-- VHDL generated for", vhdl)] # list of endpoints of match of "entity"
+    target_name_start = endss[-1] +1
+    i = target_name_start
+    while(vhdl[i]!=" "):
+        i=i+1
+    target_name_end = i
+    targetname=vhdl[target_name_start:target_name_end]
+    
+    # the frequency follows but we don't need to read it so far
+    frequency_start=target_name_end+3 #  skip " @ "
+    i = frequency_start
+    while(vhdl[i]!=" " and vhdl[i]!="M"): # 400MHz or 400 MHz
+        i=i+1
+    frequency_end = i
+    frequency = vhdl[frequency_start:frequency_end]
+
+    return (entityname, targetname, frequency)
+
+
+
+
+#/* main */
+if __name__ == '__main__':
+
+
+    parser = argparse.ArgumentParser(description='This is an helper script for FloPoCo that launches Xilinx Vivado and extracts resource consumption and critical path information')
+#    parser.add_argument('-i', '--implement', action='store_true', help='Go all the way to implementation (default stops after synthesis)')
+    parser.add_argument('-v', '--vhdl', help='VHDL file name (default flopoco.vhdl)')
+    parser.add_argument('-e', '--entity', help='Entity name (default is last entity of the VHDL file)')
+    parser.add_argument('-t', '--target', help='Target name (default is read from the VHDL file)')
+    parser.add_argument('-f', '--frequency', help='Objective frequency (default is read from the VHDL file)')
+
+    options=parser.parse_args()
+    
+    if (options.vhdl==None):
+        filename = "flopoco.vhdl"
+    else:
+        filename = options.vhdl
+
+
+    # Read from the vhdl file the entity name and target hardware and freqyency
+    report("Reading file " + filename)
+    (entity_in_file, target_in_file, frequency_in_file) =  get_compile_info(filename)
+
+# 
+    if (options.entity==None):
+        entity = entity_in_file
+    else:
+        entity=options.entity
+        
+    if (options.frequency==None):
+        frequency = frequency_in_file
+    else:
+        frequency = options.frequency
+
+    if (options.target==None):
+        target = target_in_file
+    else:
+        target=options.target
+
+    if (target.lower()=="stratixv"):
+        part="5SGXEA3K1F35C1"
+        fmax_string="; Fmax Summary"
+    else:
+        raise BaseException("Target " + target + " not supported")
+    # TODO manage other targets, too
+
+    report("   entity:     " +  entity)
+    report("   target:     " +  target)
+    report("   frequency:  " +  frequency + " MHz")
+
+    
+    filename_abs = os.path.abspath(filename)
+
+    # Create the sdc file. For this we use the previous frequency,
+    sdc_file_name = entity+".sdc"
+    report("Writing clock file " + sdc_file_name)
+    clock_file = open(sdc_file_name,"w")
+    period = 1000.0/float(frequency) # the frequency is in MHz and the period in ns
+    clock_file.write("# This file was created by the quartus_runsyn utility. Sorry to clutter your tmp.\n")
+    clock_file.write("create_clock -name clk -period " + str(period) + " [get_ports clk] \n")
+    clock_file.close()
+
+    
+    map_command = "quartus_map --source="+filename + " --part="+part + " " + entity
+    fit_command = "quartus_fit " + entity
+    sta_command = "quartus_sta --multicorner=off --do_report_timing " + entity 
+
+    report(map_command)
+    os.system(map_command)
+    report(fit_command)
+    os.system(fit_command)
+    report(sta_command)
+    os.system(sta_command)
+
+    fit_report=open(entity+".fit.rpt").read()
+
+    index1=fit_report.find("; Device")
+    index2=fit_report.find("; Total HSSI", index1)
+    print fit_report[index1:index2]
+
+    sta_report=open(entity+".sta.rpt").read()
+    index1=sta_report.find(fmax_string)
+    index2=sta_report.find("This panel", index1)
+    print sta_report[index1:index2]
+
+    failure=sta_report.find("VIOLATED")
+    if(failure!=-1): # TODO! The following was intended to get more details but it reports nothing new. Go read the doc...
+        report("Target frequency not met -- extracting critical path")
+        tcl_filename = "/tmp/"+ entity + "_sta.tcl"
+        sta_tcl_file = open(tcl_filename, 'w')
+        sta_tcl_file.write("# File generated by FloPoCo's quartus_runsyn. Sorry to clutter your tmp\n");
+        sta_tcl_file.write("project_open " + entity +"\n");
+        sta_tcl_file.write("create_timing_netlist" +"\n");
+        sta_tcl_file.write("read_sdc " + entity + ".sdc" +"\n");
+        sta_tcl_file.write("update_timing_netlist" +"\n");
+        sta_tcl_file.write("report_timing -detail full_path" +"\n");
+        sta_tcl_file.close();
+        os.system("quartus_sta -t " + tcl_filename)
+
