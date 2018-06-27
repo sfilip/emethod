@@ -53,7 +53,29 @@ Asuming that the extracted project is in the `emethod` directory,  building the 
 cd emethod
 cd main
 cmake .
-make -j
+make all
+```
+There are several build options, that can be passed directly to cmake.
+```sh
+-DCFG_TYPE=Release|Debug
+```
+set by default to `Release`, will generate debug information and show debug messages during compilation if set to `Debug`.
+```sh
+-DCFG_FLOPOCO=Lib|LibExec
+```
+set by default to `Lib`, allows building FloPoCo as either library only, or library and executable (useful for comparing the performance of E-methodHW, as described in the research report).
+
+If you would like to remove the files generated during build or subsequent runs of `emethodHW`, type:
+```sh
+make clean-all
+```
+If you would like to remove the files generated during the build of `emethodHW` type:
+```sh
+make clean-cmake-files
+```
+If you would like to remove only the files generated during the execution of `emethodHW`, type:
+```sh
+make clean-run-files
 ```
 
 ***
