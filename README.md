@@ -56,11 +56,11 @@ cmake .
 make all
 ```
 There are several build options, that can be passed directly to cmake.
-```sh
+```cmake
 -DCFG_TYPE=Release|Debug
 ```
 set by default to `Release`, will generate debug information and show debug messages during compilation if set to `Debug`.
-```sh
+```cmake
 -DCFG_FLOPOCO=Lib|LibExec
 ```
 set by default to `Lib`, allows building FloPoCo as either library only, or library and executable (useful for comparing the performance of E-methodHW, as described in the research report).
@@ -82,6 +82,35 @@ make clean-run-files
 ***
 
 ## Usage
+
+### Passing parameters
+
+There are several ways of passing paremeters to `emethodHW`. In decreasing order of their priority, they are:
+   1. *command line*
+   2. *default values*
+   3. *configuration file*
+
+Parameters on the command line are passed as:
+```sh
+--<parameter_name>=<value>
+```
+The exact format of `<value>`depends on its actual format (for example, a string is specified between single or double quotes).
+
+Parameters in the configuration file are passed as:
+```sh
+<parameter_name>=value
+```
+each on an individual line. You can insert lines that start with *#* in orderto separate the parameters into groups.
+
+For details on the default values,  pull up the help, by typing:
+```sh
+emethod --help-all
+```
+, or have a look at the [CommandLineParser.cpp] file.
+
+If no parameters are provided, `emethodHW` is configured to run **Example 1** from the [research report].
+
+[CommandLineParser.cpp]: ./main/CommandLineParser.cpp
 
 ***
 ***
