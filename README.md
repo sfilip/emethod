@@ -83,7 +83,7 @@ make clean-run-files
 
 ## Usage
 
-### Passing parameters
+### Passing Parameters
 
 There are several ways of passing paremeters to `emethodHW`. In decreasing order of their priority, they are:
    1. *command line*
@@ -109,8 +109,39 @@ emethod --help-all
 or have a look at the [CommandLineParser.cpp] file.
 
 If no parameters are provided, `emethodHW` is configured to run **Example 1** from the [research report].
+Not providing some of the required parameters results in the usage of the default one, which might not meet your expectations.
 
 [CommandLineParser.cpp]: ./main/CommandLineParser.cpp
+
+### Program Parameters
+
+The following is a list of parameters and their meaning:
+	
+**Mandatory functional paremeters**
+- **function, f** - the function to evaluate; e.g. "((x * 4.5)^4 + 1)^0.5"
+- **weight, w** - the weight of the function to evaluate
+- **delta, d** - the value of *delta* in the E-method algorithm
+- **radix, r** - the radix used for the implementation
+- **lsbInOut, l** - the weight of the *least significant bit* of the input and the output in the used fixed-point format
+
+**Optional functional parameters**
+- **xi, x** - the value of *xi* in the E-method algorithm
+- **alpha, a** - the value of the **alpha** parameter in the E-method algorithm
+- **scaleInput** - enables/disables the generation of the hardware for scaling the input to the circuit
+- **inputScalingFactor** - value of the input scaling factor
+- **msbInOut, m** - the weight of the *most significant bit* of the input and the output in the used fixed-point format
+
+**Optional perfomance parameters**
+- **verbosity** - the verbosity level, controling the amount of messages printed at the command line; ranges from 0=no messages, to 5=all messages
+- **pipeline** - enables/disables the generation of a pipeline for the resulting hardware implementation
+- **frequency** - the target frequency of the resulting hardware implementation (take this with a grain of salt, the generator tries to get a close-enough to the set value)
+- **testbench** - the number of testcases to be generated; if set to *0*, no tests are generated
+
+**Miscellaneous options**
+- **version, v** - version of emethodHW and of the used libraries
+- **help, h** - produce the help message
+- **help-all** - produce an extended help message
+- **configFile, c** - the name of the file containing the configurations, if it exists
 
 ***
 ***
