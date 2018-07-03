@@ -30,8 +30,8 @@ If you would like to find more technical details, as well as comparisons with ot
 **E-methodHW** depends on the *efrac* library and on *FloPoCo*.
 In turn, *efrac* depends on: [gmp], [mpfr], [mpreal], [fplll], [eigen] and [qsopt_ex].
 You can follow instructions on the respective websites in order to install them on your system.
-*[FloPoCo]* has a pretty extensive list of dependencies, that you can check on the project's page. Alternatively, you can use their [one-line install] to get everything ready (you can leave out the download and install of the actual library, as everything required is provided in this repository).
-Alternatively (and hoping you have one of the supported distributions) here is the required shell command:
+*[FloPoCo]* has a pretty extensive list of dependencies, that you can check on the project's page. You can also use their [one-line install] to get everything ready (you can leave out the download and install of the actual library, as everything required is provided in this repository).
+To make things easier (and hoping you have one of the supported distributions), here is the required shell command:
 ```sh
 sudo apt-get install g++ libgmp3-dev libmpfr-dev libfplll-dev libxml2-dev bison libmpfi-dev flex cmake libboost-all-dev libgsl0-dev && wget https://gforge.inria.fr/frs/download.php/33151/sollya-4.1.tar.gz && tar xzf sollya-4.1.tar.gz && cd sollya-4.1/ && ./configure && make -j4 && sudo make install
 ```
@@ -63,17 +63,17 @@ set by default to `Release`, will generate debug information and show debug mess
 ```cmake
 -DCFG_FLOPOCO=Lib|LibExec
 ```
-set by default to `Lib`, allows building FloPoCo as either library only, or library and executable (useful for comparing the performance of E-methodHW, as described in the research report).
+set by default to `Lib`, allows building FloPoCo as either library only, or library and executable (useful for comparing the performance of E-methodHW, as described in the research report) when set to `LibExec`.
 
-If you would like to remove the files generated during build or subsequent runs of `emethodHW`, type:
+If you would like to remove the files generated during build or subsequent runs of `emethodHW`, you can use the `clean-all` make target by typing:
 ```sh
 make clean-all
 ```
-If you would like to remove the files generated during the build of `emethodHW` type:
+If you would like to remove the files generated during the build of `emethodHW`, use the `clean-cmake-files`:
 ```sh
 make clean-cmake-files
 ```
-If you would like to remove only the files generated during the execution of `emethodHW`, type:
+If you would like to remove only the files generated during the execution of `emethodHW`, use the `clean-run-files`:
 ```sh
 make clean-run-files
 ```
@@ -106,7 +106,7 @@ For details on the default values,  pull up the help, by typing:
 ```sh
 emethod --help-all
 ```
-, or have a look at the [CommandLineParser.cpp] file.
+or have a look at the [CommandLineParser.cpp] file.
 
 If no parameters are provided, `emethodHW` is configured to run **Example 1** from the [research report].
 
