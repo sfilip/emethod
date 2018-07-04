@@ -5,13 +5,15 @@
 
 ## Project Overview
 
-This project proposes an automatic method for the evaluation of functions via polynomial or rational approximations and its hardware implementation, on FPGAs.
+This project proposes an automatic method for the evaluation of functions via polynomial or rational approximations and their hardware implementations, on FPGAs.
 
-These approximations are evaluated using Ercegovac's iterative E-method <sup>[1](#ref1)</sup>  <sup>[2](#ref2)</sup>  adapted for FPGA implementation.
+The approximations are evaluated using Ercegovac's iterative E-method <sup>[1](#ref1)</sup>  <sup>[2](#ref2)</sup>  adapted for state-of-the-art and high-throughput FPGA implementations.
 
-The polynomial and rational function coefficients are optimized such that they satisfy the constraints of the E-method.
+The polynomial and rational function coefficients are computed in such a way that they not only satisfy the constraints of the E-method, but are also optimal.
 
-If you would like to find more technical details, as well as comparisons with other tools that offer hardware function approximations, have a look in the [research report]. You can also have a look at the [slides] of the presentation that Silviu-Ioan Filip gave at ARITH25, presenting the project.
+If you would like to find more technical details, as well as comparisons with other tools that offer hardware function approximations, have a look at the [research report]. You can also have a look at the [slides] of the presentation that Silviu-Ioan Filip gave at [ARITH25], presenting the project.
+
+If you have any remarks, suggestions or requests, please get in touch.
 
 ---
 
@@ -21,16 +23,17 @@ If you would like to find more technical details, as well as comparisons with ot
 
 [research report]: ./doc/e-metod_research_report.pdf
 [slides]: ./doc/slides_arith2018_Silviu_Filip.pdf
+[ARITH25]: http://www.ecs.umass.edu/arith-2018/
 
 ***
 ***
 
 ## Installation Instructions
 
-**E-methodHW** depends on the *efrac* library and on *FloPoCo*.
+The **E-methodHW** project depends on the *efrac* library and on *[FloPoCo]*.
 In turn, *efrac* depends on: [gmp], [mpfr], [mpreal], [fplll], [eigen] and [qsopt_ex].
-You can follow instructions on the respective websites in order to install them on your system.
-*[FloPoCo]* has a pretty extensive list of dependencies, that you can check on the project's page. You can also use their [one-line install] to get everything ready (you can leave out the download and install of the actual library, as everything required is provided in this repository).
+You can follow instructions on their respective websites in order to install them on your system.
+*[FloPoCo]* has a pretty extensive list of dependencies, that you can check on the project's page. You can also use their [one-line install] to get everything ready (**leave out the download and install of the FloPoCo library**, as everything required is provided in this repository).
 To make things easier (and hoping you have one of the supported distributions), here is the required shell command:
 ```sh
 sudo apt-get install g++ libgmp3-dev libmpfr-dev libfplll-dev libxml2-dev bison libmpfi-dev flex cmake libboost-all-dev libgsl0-dev && wget https://gforge.inria.fr/frs/download.php/33151/sollya-4.1.tar.gz && tar xzf sollya-4.1.tar.gz && cd sollya-4.1/ && ./configure && make -j4 && sudo make install
@@ -55,6 +58,12 @@ cd main
 cmake .
 make all
 ```
+
+Test the program by typing:
+```sh
+./emethodHW --help
+```
+
 There are several build options, that can be passed directly to cmake.
 ```cmake
 -DCFG_TYPE=Release|Debug
@@ -102,7 +111,7 @@ Parameters in the configuration file are passed as:
 ```
 each on an individual line. You can insert lines that start with *#* in orderto separate the parameters into groups.
 
-For details on the default values,  pull up the help, by typing:
+For details on the default values,  pull up the help page, by typing:
 ```sh
 emethod --help-all
 ```
@@ -118,7 +127,7 @@ Not providing some of the required parameters results in the usage of the defaul
 The following is a list of parameters and their meaning:
 	
 **Mandatory functional paremeters**
-- **function, f** - the function to evaluate; e.g. "((x * 4.5)^4 + 1)^0.5"
+- **function, f** - the function to evaluate; e.g. "((x*4.5)^4 + 1)^0.5"
 - **weight, w** - the weight of the function to evaluate
 - **delta, d** - the value of *delta* in the E-method algorithm
 - **radix, r** - the radix used for the implementation
@@ -134,7 +143,7 @@ The following is a list of parameters and their meaning:
 **Optional perfomance parameters**
 - **verbosity** - the verbosity level, controling the amount of messages printed at the command line; ranges from 0=no messages, to 5=all messages
 - **pipeline** - enables/disables the generation of a pipeline for the resulting hardware implementation
-- **frequency** - the target frequency of the resulting hardware implementation (take this with a grain of salt, the generator tries to get a close-enough to the set value)
+- **frequency** - the target frequency of the resulting hardware implementation (take this with a grain of salt, the generator tries to get a close-enough to the set value); taken into account when pipelining is enabled
 - **testbench** - the number of testcases to be generated; if set to *0*, no tests are generated
 
 **Miscellaneous options**
