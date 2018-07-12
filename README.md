@@ -13,6 +13,18 @@ The polynomial and rational function coefficients are computed in such a way tha
 
 If you would like to find more technical details, as well as comparisons with other tools that offer hardware function approximations, have a look at the [research report]. You can also have a look at the [slides] of the presentation that Silviu-Ioan Filip gave at [ARITH25], presenting the project.
 
+You can cite this work as:
+```bibtex
+@inproceedings{FilipIstoanEtAl2018,
+  author = {Nicolas Brisebarre, George Constantinides, Miloš Ercegovac, Silviu-Ioan Filip, Matei Istoan, Jean-Michel Muller},
+  title = {A High Throughput Polynomial and Rational Function Approximations Evaluator},
+  booktitle = {25th IEEE Symposium of Computer Arithmetic (ARITH-25)},
+  year = {2018},
+  month = Jun,
+  nopublisher = {IEEE}
+}
+```
+
 If you have any remarks, suggestions or requests, please get in touch.
 
 ---
